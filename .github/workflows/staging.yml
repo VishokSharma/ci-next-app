@@ -1,0 +1,46 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to Staging Server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up SSH
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/ssh_key
+          chmod 600 ~/ssh_key
+
+          mkdir -p ~/.ssh
+          echo "${{ secrets.KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      - name: Deploy application
+        run: |
+          ssh -i ~/ssh_key ubuntu@YOUR_STAGING_EC2_IP << 'EOF'
+            cd ~/ci-next-app
+
+            git pull origin main
+
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+            pnpm install
+            pnpm run build
+
+            sudo install -m 644 nginx/dev.conf /etc/nginx/sites-available/dev
+            sudo ln -sfn /etc/nginx/sites-available/dev /etc/nginx/sites-enabled/dev
+
+            sudo nginx -t
+            sudo systemctl reload nginx
+
+            pm2 restart fe-server
+            pm2 restart http-server
+            pm2 restart ws-server
+
+            pm2 save
+          EOF
