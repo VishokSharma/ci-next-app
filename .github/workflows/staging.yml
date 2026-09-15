@@ -21,7 +21,7 @@ jobs:
 
       - name: Deploy application
         run: |
-          ssh -i ~/ssh_key ubuntu@YOUR_STAGING_EC2_IP << 'EOF'
+          ssh -i ~/ssh_key ubuntu@16.192.76.5 << 'EOF'
             cd ~/ci-next-app
 
             git pull origin main
